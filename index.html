@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JFINEX QR Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #f0f2f5; padding: 20px; }
+        #reader { width: 100%; max-width: 450px; margin: auto; border: 5px solid #fff; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .controls { margin: 20px 0; padding: 15px; background: white; border-radius: 10px; display: inline-block; }
+        #scanned-result { margin: 15px; font-weight: bold; min-height: 24px; }
+        table { width: 100%; max-width: 600px; margin: 20px auto; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .btn-excel { background-color: #28a745; color: white; padding: 12px 25px; border: none; cursor: pointer; border-radius: 5px; font-size: 16px; margin: 10px; }
+        .btn-start { background-color: #007bff; color: white; padding: 12px 25px; border: none; cursor: pointer; border-radius: 5px; font-size: 16px; margin: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>📊 FINANCIAL MANAGEMENT STUDENTS ATTENDANCE</h2>
+
+    <div class="controls">
+        <label><b>Set Status:</b></label>
+        <select id="status-select" style="padding: 10px; font-size: 16px;">
+            <option value="IN">ENTERING (IN)</option>
+            <option value="OUT">EXITING (OUT)</option>
+        </select>
+    </div>
+
+    <div id="reader"></div>
+    <button class="btn-start" onclick="startScanner()">START CAMERA</button>
+    
+    <div id="scanned-result">Ready to scan...</div>
+
+    <button class="btn-excel" onclick="exportToExcel()">📥 Download Excel (.csv)</button>
+
+    <table id="log-table">
+            <thead>
+            <tr>
+                <th>SECTION-NAME</th>
+                <th>Status</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+    </table>
+
+    <script>
+        let logData = [];
+        let html5QrCode;
+        let isPaused = false;
+
+        async function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                alert("Error: E-open kini sa CHROME ug i-ALLOW ang camera.");
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            if (isPaused) return;
+
+            const status = document.getElementById('status-select').value;
+            const resultDisplay = document.getElementById('scanned-result');
+
+           
+            const alreadyExists = logData.some(entry => entry.id === decodedText && entry.status === status);
+
+            if (alreadyExists) {
+                resultDisplay.innerText = "❌ Warning: ALREADY SCAN AYAWG GARAPAL HAHA!";
+                resultDisplay.style.color = "red";
+                return;
+            }
+
+           
+            const time = new Date().toLocaleString();
+            logData.push({ id: decodedText, status: status, time: time });
+
+
+            const row = `<tr><td>${decodedText}</td><td>${status}</td><td>${time}</td></tr>`;
+            document.getElementById('log-body').insertAdjacentHTML('afterbegin', row);
+
+            resultDisplay.innerText = "✅ Success: Recorded!";
+            resultDisplay.style.color = "green";
+            
+
+            isPaused = true;
+            setTimeout(() => { isPaused = false; resultDisplay.innerText = "Ready to scan next..."; }, 3000);
+            
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+
+        function exportToExcel() {
+            if (logData.length === 0) return alert("Walay data nga na-scan!");
+            let csv = "ID,Status,Timestamp\n";
+            logData.forEach(entry => { csv += `${entry.id},${entry.status},${entry.time}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'Participant_Log.csv');
+            a.click();
+        }
+    </script>
+</body>
+</html>
