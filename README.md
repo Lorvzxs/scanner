@@ -1,2 +1,0 @@
-# scanner
-for officers only
